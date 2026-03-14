@@ -1,0 +1,193 @@
+{% extends "layout.html" %}
+
+{% block title %}Enterprise Dashboard{% endblock %}
+
+{% block content %}
+<div class="stats-overview">
+    <div class="stat-card">
+        <h3>Volume (24h)</h3>
+        <p class="stat-value">₹ 14.2M</p>
+        <span class="stat-trend up">↑ 8.4% since yesterday</span>
+    </div>
+    <div class="stat-card danger">
+        <h3>Prevented Losses</h3>
+        <p class="stat-value">₹ 2.1M</p>
+        <span class="stat-trend">High critical rescue rate</span>
+    </div>
+    <div class="stat-card">
+        <h3>Active Alerts</h3>
+        <p id="active-alerts-count" class="stat-value">03</p>
+        <span class="stat-trend warning-text">Immediate Review Required</span>
+    </div>
+    <div class="stat-card">
+        <h3>System Integrity</h3>
+        <p class="stat-value">Tier 1</p>
+        <span class="stat-trend up">Encryption Active</span>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <!-- Active Threats Column -->
+    <div class="card" style="grid-column: span 2;">
+        <div class="card-header-flex">
+            <h2 class="section-title">🛡️ Mission Control: Threat Analytics</h2>
+            <div class="system-status">
+                <span class="online-pulse"></span> Scanning Live Streams
+            </div>
+        </div>
+        <div id="analytics-overview" style="height: 300px; margin-bottom: 2rem;">
+            <!-- Main Chart Injected Here -->
+            <canvas id="mainFraudChart"></canvas>
+        </div>
+        <div class="action-bar"
+            style="display: flex; gap: 1rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+            <a href="/live_monitor" class="btn-primary-glow" style="text-decoration: none; font-size: 0.9rem;">🛰️ Open
+                Live Monitor</a>
+            <a href="/qr_scanner" class="btn-report"
+                style="text-decoration: none; font-size: 0.9rem; background: var(--sidebar-bg);">📷 Scan QR</a>
+        </div>
+    </div>
+
+    <!-- Recent Alerts -->
+    <div class="card">
+        <h2 class="section-title">⚡ Real-time Alerts</h2>
+        <div id="live-fraud-alerts" class="alerts-monitor-container" style="max-height: 400px;">
+            <p class="monitor-empty">Gathering signal data...</p>
+        </div>
+    </div>
+
+    <!-- Transaction History Table -->
+    <div class="card grid-full">
+        <div class="card-header-flex">
+            <h2 class="section-title">📅 Global Transaction Ledger</h2>
+            <button onclick="fetchHistory()" class="btn-secondary" style="font-size: 0.8rem; padding: 0.5rem 1rem;">🔄
+                Refresh Ledger</button>
+        </div>
+        <div class="table-container">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Sender</th>
+                        <th>Merchant/Receiver</th>
+                        <th>Amount</th>
+                        <th>Location</th>
+                        <th>Risk Core %</th>
+                        <th>Outcome</th>
+                    </tr>
+                </thead>
+                <tbody id="transaction-history-body">
+                    <tr>
+                        <td colspan="7" class="placeholder-text">Syncing with blockchain ledger...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        initMainChart();
+        fetchHistory();
+        // Poll for history every 10s
+        setInterval(fetchHistory, 10000);
+    });
+
+    function initMainChart() {
+        const ctx = document.getElementById('mainFraudChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['12am', '4am', '8am', '12pm', '4pm', '8pm'],
+                datasets: [{
+                    label: 'Fraud Attempts',
+                    data: [12, 19, 3, 5, 2, 3],
+                    borderColor: '#ef4444',
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)'
+                }, {
+                    label: 'Legitimate Volume',
+                    data: [100, 120, 150, 170, 140, 130],
+                    borderColor: '#10b981',
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    async function fetchHistory() {
+        try {
+            const res = await fetch('/api/get_history');
+            const data = await res.json();
+            renderHistory(data);
+            updateAlerts(data);
+        } catch (e) { console.error(e); }
+    }
+
+    function renderHistory(data) {
+        const body = document.getElementById('transaction-history-body');
+        if (!body) return;
+
+        if (data.length === 0) {
+            body.innerHTML = '<tr><td colspan="7" class="placeholder-text">No transactions found in ledger.</td></tr>';
+            return;
+        }
+
+        body.innerHTML = data.map(tx => `
+            <tr>
+                <td>${tx.time}</td>
+                <td style="font-weight: 600;">${tx.sender}</td>
+                <td>${tx.receiver}</td>
+                <td>₹ ${tx.amount.toLocaleString()}</td>
+                <td>${tx.location}</td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="width: 40px; font-weight: 800;">${tx.risk_score}%</span>
+                        <div style="flex: 1; height: 4px; background: #eee; border-radius: 2px;">
+                            <div style="width: ${tx.risk_score}%; height: 100%; background: ${tx.risk_score > 70 ? '#ef4444' : (tx.risk_score > 30 ? '#f59e0b' : '#10b981')}; border-radius: 2px;"></div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="legit" style="color: ${tx.status === 'Fraud' ? '#ef4444' : (tx.status === 'Suspicious' ? '#f59e0b' : '#10b981')}; font-weight: 800; text-transform: uppercase; font-size: 0.75rem;">
+                        ${tx.status}
+                    </span>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function updateAlerts(data) {
+        const container = document.getElementById('live-fraud-alerts');
+        if (!container) return;
+
+        const highRisk = data.filter(tx => tx.risk_score >= 30).slice(0, 5);
+        if (highRisk.length === 0) {
+            container.innerHTML = '<p class="monitor-empty">No critical threats detected in current cycle.</p>';
+            return;
+        }
+
+        container.innerHTML = highRisk.map(tx => `
+            <div class="monitor-alert-card ${tx.status.toLowerCase() === 'fraud' ? 'critical' : 'warning'}" style="margin-bottom: 0.75rem; padding: 1rem;">
+                <div class="monitor-header" style="margin-bottom: 0.5rem;">
+                    <span class="monitor-title" style="font-size: 0.75rem;">${tx.status} ALERT</span>
+                    <span class="monitor-time">${tx.time}</span>
+                </div>
+                <p style="font-size: 0.85rem; font-weight: 700;">₹ ${tx.amount} @ ${tx.receiver}</p>
+                <p class="text-muted" style="font-size: 0.75rem;">Risk Score: ${tx.risk_score}%</p>
+            </div>
+        `).join('');
+    }
+</script>
+{% endblock %}

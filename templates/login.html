@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FraudShield AI - Access Control</title>
+    <link rel="stylesheet" href="/frontend/style.css">
+</head>
+
+<body class="login-body-v2">
+    <div class="login-container-v2">
+        <div class="login-box">
+            <div class="brand" style="border: none; margin-bottom: 3rem;">
+                <span style="font-size: 2rem;">🛡️</span>
+                <span class="brand-name">FraudShield AI</span>
+            </div>
+
+            <h2 style="color: white; font-weight: 800; font-size: 2rem; margin-bottom: 0.5rem;">Access Portal</h2>
+            <p style="color: #94a3b8; margin-bottom: 2.5rem;">Enter your credentials to access the monitoring terminal.
+            </p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert-panel high"
+                style="padding: 1rem; margin-bottom: 1rem; background: rgba(239, 68, 68, 0.1);">
+                <p style="color: #ef4444; font-size: 0.8rem; font-weight: 700;">{{ message }}</p>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <form action="/login" method="POST">
+                <div class="input-group">
+                    <label style="color: #94a3b8;">SECURE EMAIL</label>
+                    <input type="email" name="email" placeholder="user@fraudshield.ai"
+                        style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: white;"
+                        required>
+                </div>
+                <div class="input-group">
+                    <label style="color: #94a3b8;">AUTHENTICATION KEY</label>
+                    <input type="password" name="password" placeholder="••••••••"
+                        style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: white;"
+                        required>
+                </div>
+
+                <button type="submit" class="btn-primary-glow"
+                    style="width: 100%; margin-top: 2rem; border: none; cursor: pointer;">
+                    Authorize Session ➔
+                </button>
+            </form>
+
+            <p style="margin-top: auto; color: #475569; font-size: 0.75rem; text-align: center;">
+                PROPRIETARY SYSTEM • INTERNAL USE ONLY
+            </p>
+        </div>
+
+        <div class="login-artwork" style="background: var(--grad-hero); position: relative; overflow: hidden;">
+            <div class="artwork-pulse"></div>
+            <div style="z-index: 10; text-align: center; color: white; padding: 3rem;">
+                <div style="font-size: 5rem; margin-bottom: 2rem;">🛡️</div>
+                <h3 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1rem;">Military Grade Security</h3>
+                <p style="opacity: 0.7; font-size: 0.9rem;">Multi-layered AI verification for every transaction across
+                    the digital economy.</p>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

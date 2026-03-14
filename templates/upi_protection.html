@@ -1,0 +1,182 @@
+{% extends "layout.html" %}
+
+{% block title %}UPI Receiver Verification{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="section-title">🛡️ High-Precision UPI Receiver Verification</h2>
+    <p class="text-muted" style="margin-bottom: 2rem;">Ensure the money goes to the right people. Detect receiver name
+        mismatches and check against our global suspicious UPI registry.</p>
+
+    <div class="upi-form">
+        <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div class="input-group">
+                <label for="senderName">Sender Name</label>
+                <input type="text" id="senderName" value="{{ session['user'] }}" readonly style="background: #f1f5f9;">
+            </div>
+            <div class="input-group">
+                <label for="expectedReceiver">Intended Receiver Name</label>
+                <input type="text" id="expectedReceiver" placeholder="Who do you mean to pay?">
+            </div>
+        </div>
+
+        <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div class="input-group">
+                <label for="actualReceiver">Displayed Receiver Name</label>
+                <input type="text" id="actualReceiver" placeholder="Name shown on the payment app">
+            </div>
+            <div class="input-group">
+                <label for="upiId">Target UPI ID</label>
+                <input type="text" id="upiId" placeholder="e.g., merchant@upi">
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="transactionAmount">Payment Amount (₹)</label>
+            <input type="number" id="transactionAmount" placeholder="0.00">
+        </div>
+
+        <button onclick="verifyUPI()" class="btn-primary-glow"
+            style="width: 100%; margin-top: 1rem; border: none; font-size: 1rem; cursor: pointer;">
+            ⚡ Execute Security Scan
+        </button>
+    </div>
+
+    <!-- Multi-state Alert Area -->
+    <div id="upi-status-card" class="alert-panel" style="display: none; margin-top: 2.5rem;">
+        <div class="alert-content">
+            <span id="upi-icon" class="warning-icon">⚠️</span>
+            <div class="alert-text">
+                <h2 id="upi-title">Verification Required</h2>
+                <p id="upi-details">-</p>
+                <p id="upi-risk-badge"
+                    style="margin-top: 0.5rem; font-weight: 800; text-transform: uppercase; font-size: 0.8rem;"></p>
+            </div>
+        </div>
+
+        <div id="upi-actions" class="prevention-actions" style="margin-top: 2.5rem; display: none; gap: 1rem;">
+            <button onclick="terminateTx()" style="background: #dc2626; flex: 1.5; font-weight: 800;">🛑 ABORT
+                TRANSACTION</button>
+            <button onclick="confirmTx()" style="background: #64748b; flex: 1;">Proceed with Caution</button>
+            <button onclick="reportUPI()" style="background: #1e293b; flex: 1;">Blacklist UPI ID</button>
+        </div>
+    </div>
+
+    <div id="abort-success" class="card"
+        style="display: none; background: #fff5f5; border: 2px solid #feb2b2; text-align: center; padding: 3rem; margin-top: 2rem;">
+        <span style="font-size: 4rem;">🛑</span>
+        <h2 style="color: #c53030; font-weight: 800; margin-top: 1rem;">Protocol Terminated</h2>
+        <p style="color: #9b2c2c;">This transaction has been blocked for your protection. The signal hash has been
+            logged.</p>
+    </div>
+</div>
+
+<div class="divider">PRE-PROGRAMMED THREAT VECTORS</div>
+<div class="test-scenarios">
+    <button class="btn-test success" onclick="fillUPI('Alice Stores', 'Alice Stores', 'alice@paytm', 500)">Clean
+        Transaction</button>
+    <button class="btn-test danger" onclick="fillUPI('Alice Stores', 'Bob Hacker', 'bob@upi', 12000)">Receiver
+        Mismatch</button>
+    <button class="btn-test danger"
+        onclick="fillUPI('Customer Help', 'Customer Help', 'amazon-refund-help@upi', 5000)">Blacklisted ID</button>
+</div>
+
+<script>
+    function fillUPI(exp, act, id, amt) {
+        document.getElementById('expectedReceiver').value = exp;
+        document.getElementById('actualReceiver').value = act;
+        document.getElementById('upiId').value = id;
+        document.getElementById('transactionAmount').value = amt;
+    }
+
+    async function verifyUPI() {
+        const expected = document.getElementById('expectedReceiver').value;
+        const actual = document.getElementById('actualReceiver').value;
+        const upiId = document.getElementById('upiId').value;
+        const amount = document.getElementById('transactionAmount').value;
+
+        if (!expected || !actual || !upiId) return alert("Please fulfill all identity data points.");
+
+        const res = await fetch('/api/process_transaction', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                amount: parseFloat(amount),
+                receiver: upiId,
+                expected_name: expected,
+                actual_name: actual,
+                mismatch: expected.toLowerCase() !== actual.toLowerCase()
+            })
+        });
+        const data = await res.json();
+
+        // Show result card
+        const card = document.getElementById('upi-status-card');
+        const title = document.getElementById('upi-title');
+        const details = document.getElementById('upi-details');
+        const icon = document.getElementById('upi-icon');
+        const badge = document.getElementById('upi-risk-badge');
+        const actions = document.getElementById('upi-actions');
+        const abortMsg = document.getElementById('abort-success');
+
+        card.style.display = 'block';
+        abortMsg.style.display = 'none';
+
+        const isMismatch = expected.toLowerCase() !== actual.toLowerCase();
+
+        if (data.status === 'Fraud' || isMismatch) {
+            card.className = "alert-panel high";
+            icon.innerText = "🚫";
+            title.innerText = isMismatch ? "IDENTITY MISMATCH DETECTED" : "FRAUDULENT TARGET DETECTED";
+            details.innerText = isMismatch
+                ? `Safety Violation: You intended to pay '${expected}' but the receiver is '${actual}'.`
+                : `Security Violation: This UPI identity (${upiId}) is flagged on our global watchlist.`;
+            badge.innerText = "Risk Level: High-Critical";
+            badge.style.color = "#dc2626";
+            actions.style.display = 'flex';
+        } else if (data.status === 'Suspicious') {
+            card.className = "alert-panel medium";
+            icon.innerText = "⚠️";
+            title.innerText = "ANOMALOUS ACTIVITY DETECTED";
+            details.innerText = "The receiver identity is clean, but the transaction volume is unusual for your profile.";
+            badge.innerText = "Risk Level: Elevated";
+            badge.style.color = "#d97706";
+            actions.style.display = 'flex';
+        } else {
+            card.className = "alert-panel low";
+            icon.innerText = "✅";
+            title.innerText = "SIGNAL VERIFIED";
+            details.innerText = "The receiver identity and transaction volume fall within safe operational parameters.";
+            badge.innerText = "Risk Level: Minimum";
+            badge.style.color = "#166534";
+            actions.style.display = 'none';
+        }
+    }
+
+    function terminateTx() {
+        document.getElementById('upi-status-card').style.display = 'none';
+        document.getElementById('abort-success').style.display = 'block';
+    }
+
+    function confirmTx() {
+        if (confirm("Confirm: Proceeding despite system warnings?")) {
+            alert("Proceeding. Transaction token generated.");
+            location.reload();
+        }
+    }
+
+    async function reportUPI() {
+        const upiId = document.getElementById('upiId').value;
+        const res = await fetch('/api/report_upi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ upi_id: upiId })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            alert(`Signal '${upiId}' has been added to the global blacklist.`);
+            location.reload();
+        }
+    }
+</script>
+{% endblock %}

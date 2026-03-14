@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FraudShield AI - {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="/frontend/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+    <div class="dashboard-wrapper">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="shield-icon">🛡️</span>
+                <span class="brand-name">FraudShield AI</span>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="{% if page == 'dashboard' %}active{% endif %}">
+                        <a href="{{ url_for('dashboard') }}">📊 Dashboard Overview</a>
+                    </li>
+                    <li class="{% if page == 'live_monitor' %}active{% endif %}">
+                        <a href="{{ url_for('live_monitor') }}">🛰️ Live Payment Monitor</a>
+                    </li>
+                    <li class="{% if page == 'sms_analysis' %}active{% endif %}">
+                        <a href="{{ url_for('sms_analysis') }}">📱 SMS Fraud Detection</a>
+                    </li>
+                    <li class="{% if page == 'upi_verification' %}active{% endif %}">
+                        <a href="{{ url_for('upi_verification') }}">🛡️ UPI Receiver Verification</a>
+                    </li>
+                    <li class="{% if page == 'qr_scanner' %}active{% endif %}">
+                        <a href="{{ url_for('qr_scanner') }}">📷 QR Payment Scanner</a>
+                    </li>
+                    <li class="{% if page == 'analytics' %}active{% endif %}">
+                        <a href="{{ url_for('analytics') }}">📈 Fraud Analytics</a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="/download_report" class="btn-report"
+                    style="margin-bottom: 1rem; width: 100%; justify-content: center;">
+                    📥 Download Fraud Report
+                </a>
+                <a href="{{ url_for('logout') }}" class="logout-btn">🚪 Sign Out</a>
+            </div>
+        </aside>
+
+        <main class="content-area">
+            <header class="top-header">
+                <div class="user-info">
+                    <span class="avatar">{{ session['user'][0].upper() }}</span>
+                    <span class="username">Welcome, <strong>{{ session['user'] }}</strong></span>
+                </div>
+                <div class="system-status">
+                    <span class="online-pulse"></span>
+                    Operational
+                </div>
+            </header>
+
+            <div class="page-content">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <div id="notification-container" class="notification-container"></div>
+    <script src="/frontend/script.js"></script>
+</body>
+
+</html>

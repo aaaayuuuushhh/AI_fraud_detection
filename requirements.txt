@@ -1,0 +1,11 @@
+flask
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+plotly
+fpdf
+opencv-python
+pyzbar
+Flask-SQLAlchemy

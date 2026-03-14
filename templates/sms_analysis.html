@@ -1,0 +1,120 @@
+{% extends "layout.html" %}
+
+{% block title %}SMS Fraud Detection{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="section-title">📱 AI SMS Transaction Analysis</h2>
+    <p class="text-muted">Paste the transaction SMS received from your bank. Our AI will extract the details and verify
+        the risk level instantly.</p>
+
+    <div class="input-group" style="margin-top: 2rem;">
+        <label for="smsText">Bank SMS Content</label>
+        <textarea id="smsText" rows="5" placeholder="Example: Rs 85000 spent on card at AMAZON USA..."
+            style="resize: none;"></textarea>
+    </div>
+
+    <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        <div class="input-group">
+            <label for="userCity">Your Current City</label>
+            <input type="text" id="userCity" placeholder="e.g., Delhi">
+        </div>
+        <div class="input-group">
+            <label style="opacity: 0;">Spacer</label>
+            <button onclick="analyzeSMS()" class="btn-primary-glow" style="width: 100%; border: none; cursor: pointer;">
+                🔍 Analyze Signal
+            </button>
+        </div>
+    </div>
+
+    <!-- Live Extraction Panel -->
+    <div id="extraction-results" class="live-feed-panel" style="display: none; margin-top: 3rem;">
+        <h3 style="color: #a5b4fc; margin-bottom: 1.5rem;">DIGITAL SIGNAL EXTRACTION</h3>
+        <div class="live-details">
+            <p><strong>Detected Merchant</strong><span id="ext-merchant"
+                    style="font-size: 1.1rem; font-weight: 700;">-</span></p>
+            <p><strong>Detected Amount</strong><span id="ext-amount"
+                    style="font-size: 1.1rem; font-weight: 700;">-</span></p>
+            <p><strong>Detected Location</strong><span id="ext-location"
+                    style="font-size: 1.1rem; font-weight: 700;">-</span></p>
+        </div>
+
+        <div id="sms-risk-card" class="alert-panel" style="margin-top: 2rem; border-width: 1px;">
+            <div class="alert-content">
+                <span id="sms-risk-icon" class="warning-icon">🛡️</span>
+                <div class="alert-text">
+                    <h2 id="sms-risk-title">Legitimate Transaction</h2>
+                    <p id="sms-risk-details">The transaction matches your typical spending patterns and location.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="divider">TEST SMS SIGNALS</div>
+<div class="test-scenarios">
+    <button class="btn-test success" onclick="fillSMS('Rs 120 spent at Coffee Shop Bangalore', 'Bangalore')">Low
+        Risk</button>
+    <button class="btn-test warning"
+        onclick="fillSMS('Rs 15000 spent at Electronics Store Mumbai', 'Delhi')">Suspicious</button>
+    <button class="btn-test danger" onclick="fillSMS('Rs 85000 spent on card at AMAZON USA', 'Delhi')">Fraud
+        Alert</button>
+</div>
+
+<script>
+    function fillSMS(text, city) {
+        document.getElementById('smsText').value = text;
+        document.getElementById('userCity').value = city;
+    }
+
+    async function analyzeSMS() {
+        const text = document.getElementById('smsText').value;
+        const city = document.getElementById('userCity').value;
+
+        if (!text) return alert("Please paste SMS content");
+
+        // Basic Regex for extraction (simulating backend extraction but showing on UI)
+        const amtMatch = text.match(/(?:Rs|INR|₹|\$)?\s?(\d+(?:,\d+)*(?:\.\d+)?)/i);
+        const amount = amtMatch ? parseFloat(amtMatch[1].replace(/,/g, '')) : 0;
+
+        const locMatch = text.match(/at\s+([\w\s]+?)(?:\s+on|\s*$|[\.,!])/i);
+        const location = locMatch ? locMatch[1].trim() : "Unknown";
+
+        const merchant = location; // Simple heuristic
+
+        document.getElementById('extraction-results').style.display = 'block';
+        document.getElementById('ext-amount').innerText = `₹ ${amount}`;
+        document.getElementById('ext-merchant').innerText = merchant;
+        document.getElementById('ext-location').innerText = location;
+
+        const res = await fetch('/api/process_transaction', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                amount: amount,
+                receiver: merchant,
+                location: location,
+                location_anomaly: city.toLowerCase() !== location.toLowerCase() && location !== "Unknown"
+            })
+        });
+        const data = await res.json();
+
+        const card = document.getElementById('sms-risk-card');
+        const title = document.getElementById('sms-risk-title');
+        const details = document.getElementById('sms-risk-details');
+        const icon = document.getElementById('sms-risk-icon');
+
+        card.className = `alert-panel ${data.status.toLowerCase() === 'legitimate' ? 'low' : (data.status.toLowerCase() === 'suspicious' ? 'medium' : 'high')}`;
+        title.innerText = `${data.status} Detected (Score: ${data.risk_score}%)`;
+        icon.innerText = data.status === 'Fraud' ? '🚫' : (data.status === 'Suspicious' ? '⚠️' : '✅');
+
+        if (data.status === 'Fraud') {
+            details.innerText = "CRITICAL: Potential fraud detected due to high amount and/or location mismatch.";
+        } else if (data.status === 'Suspicious') {
+            details.innerText = "WARNING: Transaction shows unusual patterns. Verify the merchant before proceeding.";
+        } else {
+            details.innerText = "Transaction appears safe and matches your current location profile.";
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+
+{% block title %}Manual Transaction Check{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="section-title">Analyze Manual Transaction</h2>
+    <div class="input-group">
+        <label for="amount">Transaction Amount (₹)</label>
+        <input type="number" id="amount" placeholder="e.g., 1200.50">
+    </div>
+
+    <div class="input-group">
+        <label for="userLocation">User Current Location</label>
+        <input type="text" id="userLocation" placeholder="e.g., London">
+    </div>
+
+    <div class="input-group">
+        <label for="transactionLocation">Transaction Location</label>
+        <input type="text" id="transactionLocation" placeholder="e.g., New York">
+    </div>
+
+    <button onclick="checkFraud()" id="check-btn">🔍 Check Transaction</button>
+    <button onclick="simulateFraud()" id="simulate-btn">🔥 Simulate Fraud Attack</button>
+
+    <div class="divider">QUICK TEST SCENARIOS</div>
+    <div class="test-scenarios">
+        <button class="btn-test success" onclick="fillManualTest(50, 'London', 'London')">Low Risk</button>
+        <button class="btn-test warning" onclick="fillManualTest(1500, 'London', 'Paris')">Medium Risk</button>
+        <button class="btn-test danger" onclick="fillManualTest(95000, 'New York', 'Moscow')">Critical Fraud</button>
+    </div>
+
+    <div class="results">
+        <h2 id="result" class="result-text"></h2>
+        <h3 id="risk" class="risk-score"></h3>
+        <h3 id="location" class="location-status"></h3>
+        <div id="risk-gauge" class="chart-container"></div>
+    </div>
+</div>
+
+<!-- Fraud Alert Panel Visibility -->
+<div id="fraud-alert" class="alert-panel" style="display: none;">
+    <div class="alert-content">
+        <span class="warning-icon">⚠</span>
+        <div class="alert-text">
+            <h2 id="alert-title">FRAUD ALERT DETECTED</h2>
+            <p id="alert-details"></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

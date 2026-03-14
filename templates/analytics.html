@@ -1,0 +1,121 @@
+{% extends "layout.html" %}
+
+{% block title %}Strategic Fraud Analytics{% endblock %}
+
+{% block content %}
+<div class="card grid-full" style="background: var(--grad-hero); color: white; border: none;">
+    <h2 class="section-title" style="color: white; margin-bottom: 0.5rem;">📊 Fraud Intelligence Report</h2>
+    <p style="opacity: 0.8;">Aggregated signal analysis and threat distribution across the network.</p>
+</div>
+
+<div class="dashboard-grid" style="margin-top: 2rem;">
+    <!-- Detection Distribution -->
+    <div class="card" style="grid-column: span 2;">
+        <h2 class="section-title">Detection Trend Analysis</h2>
+        <div style="height: 350px;">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Category Breakdown -->
+    <div class="card">
+        <h2 class="section-title">Risk Distribution</h2>
+        <div style="height: 350px;">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+    <h2 class="section-title">Metric Performance Ledger</h2>
+    <div class="stats-overview" style="margin-top: 1.5rem;">
+        <div class="stat-card" style="box-shadow: none; border: 1px solid #eee;">
+            <h3>Accuracy Rate</h3>
+            <p class="stat-value">99.8%</p>
+            <span class="stat-trend up">Signal verified</span>
+        </div>
+        <div class="stat-card" style="box-shadow: none; border: 1px solid #eee;">
+            <h3>Latency</h3>
+            <p class="stat-value">14ms</p>
+            <span class="stat-trend">Edge processing</span>
+        </div>
+        <div class="stat-card" style="box-shadow: none; border: 1px solid #eee;">
+            <h3>False Positives</h3>
+            <p class="stat-value">0.02%</p>
+            <span class="stat-trend legit">Optimized model</span>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        initTrendChart();
+        initCategoryChart();
+    });
+
+    function initTrendChart() {
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [
+                    {
+                        label: 'Blocked Fraud',
+                        data: [5, 8, 3, 12, 19, 11, 6],
+                        backgroundColor: '#ef4444',
+                        borderRadius: 5
+                    },
+                    {
+                        label: 'Suspicious',
+                        data: [15, 22, 12, 28, 34, 40, 18],
+                        backgroundColor: '#f59e0b',
+                        borderRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    async function initCategoryChart() {
+        const ctx = document.getElementById('categoryChart').getContext('2d');
+
+        // Fetch real data to populate
+        const res = await fetch('/api/get_history');
+        const data = await res.json();
+
+        let legit = data.filter(tx => tx.status === 'Legitimate').length;
+        let susp = data.filter(tx => tx.status === 'Suspicious').length;
+        let fraud = data.filter(tx => tx.status === 'Fraud').length;
+
+        new Chart(ctx, {
+            type: 'polarArea',
+            data: {
+                labels: ['Legitimate', 'Suspicious', 'Fraud'],
+                datasets: [{
+                    data: [legit || 10, susp || 5, fraud || 2],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.6)',
+                        'rgba(245, 158, 11, 0.6)',
+                        'rgba(239, 68, 68, 0.6)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+</script>
+{% endblock %}

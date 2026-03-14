@@ -1,0 +1,168 @@
+{% extends "layout.html" %}
+
+{% block title %}QR Payment Scanner{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="section-title">📷 AI QR Code Payment Scanner</h2>
+    <p class="text-muted">Upload a payment QR code image to verify the receiver and analyze for potential fraud before
+        paying.</p>
+
+    <div class="qr-upload-area" id="drop-zone"
+        style="border: 2px dashed var(--border-color); border-radius: 1.5rem; padding: 4rem; text-align: center; margin-top: 2rem; transition: 0.3s; background: rgba(255,255,255,0.5);">
+        <div id="upload-prompt">
+            <span style="font-size: 4rem; display: block; margin-bottom: 1rem;">🖼️</span>
+            <p style="font-weight: 700; color: var(--text-main);">Drag & Drop QR Code Image here</p>
+            <p class="text-muted">or click to browse from files</p>
+            <input type="file" id="qr-input" accept="image/*" style="display: none;">
+        </div>
+        <div id="preview-container" style="display: none;">
+            <img id="qr-preview" style="max-width: 250px; border-radius: 1rem; box-shadow: var(--shadow);">
+            <p id="file-name" style="margin-top: 1rem; font-weight: 600;"></p>
+        </div>
+    </div>
+
+    <button id="scan-btn" class="btn-primary-glow" style="width: 100%; margin-top: 2rem; border: none; cursor: pointer;"
+        disabled>
+        📡 Analyze QR Data
+    </button>
+
+    <!-- Results Panel -->
+    <div id="qr-results" class="card"
+        style="display: none; margin-top: 3rem; background: #fafafa; border: 1px solid var(--border-color);">
+        <div class="monitor-header">
+            <span class="monitor-title">QR ENCODED DATA</span>
+            <span class="badge" id="qr-status-badge">Legitimate</span>
+        </div>
+        <div class="monitor-body" style="grid-template-columns: 1fr 1fr; margin-top: 1rem;">
+            <div>
+                <strong>Merchant / Receiver</strong>
+                <p id="qr-merchant" style="font-size: 1.25rem; font-weight: 800;">-</p>
+            </div>
+            <div>
+                <strong>UPI ID</strong>
+                <p id="qr-upi" style="font-size: 1.1rem; color: var(--primary-color);">-</p>
+            </div>
+            <div style="margin-top: 1rem;">
+                <strong>Suggested Amount</strong>
+                <p id="qr-amount" style="font-size: 1.1rem; font-weight: 700;">₹ 0.00</p>
+            </div>
+            <div style="margin-top: 1rem;">
+                <strong>Security Risk</strong>
+                <p id="qr-risk" style="font-size: 1.1rem; font-weight: 700;">-</p>
+            </div>
+        </div>
+        <div id="qr-fraud-alert" class="alert-panel high" style="display: none; margin-top: 2rem;">
+            <div class="alert-content">
+                <span class="warning-icon">🚫</span>
+                <div class="alert-text">
+                    <h2 style="color: #dc2626;">BLOCKED: Suspicious Receiver</h2>
+                    <p>This UPI ID has been identified as a known phishing account in our database.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('qr-input');
+    const scanBtn = document.getElementById('scan-btn');
+    const preview = document.getElementById('qr-preview');
+    const resultPanel = document.getElementById('qr-results');
+
+    dropZone.onclick = () => fileInput.click();
+
+    fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) handleFile(file);
+    };
+
+    function handleFile(file) {
+        document.getElementById('upload-prompt').style.display = 'none';
+        document.getElementById('preview-container').style.display = 'block';
+        document.getElementById('file-name').innerText = file.name;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            preview.src = e.target.result;
+            scanBtn.disabled = false;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    scanBtn.onclick = async () => {
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        scanBtn.innerText = "Processing AI Analysis...";
+
+        try {
+            const response = await fetch('/api/scan_qr', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            resultPanel.style.display = 'block';
+            document.getElementById('qr-merchant').innerText = data.merchant;
+            document.getElementById('qr-upi').innerText = data.upi_id;
+            document.getElementById('qr-amount').innerText = `₹ ${data.amount}`;
+
+            // Now run it through fraud engine
+            const riskRes = await fetch('/api/process_transaction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    amount: data.amount || 0,
+                    receiver: data.upi_id,
+                    location: "Current",
+                    location_anomaly: false
+                })
+            });
+            const riskData = await riskRes.json();
+
+            document.getElementById('qr-risk').innerText = `${riskData.risk_score}%`;
+            document.getElementById('qr-status-badge').innerText = riskData.status;
+            document.getElementById('qr-status-badge').className = `badge ${riskData.status.toLowerCase()}`;
+
+            if (riskData.status === 'Fraud') {
+                document.getElementById('qr-fraud-alert').style.display = 'block';
+            } else {
+                document.getElementById('qr-fraud-alert').style.display = 'none';
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert("Analysis failed. Please check the image quality.");
+        } finally {
+            scanBtn.innerText = "📡 Analyze QR Data";
+        }
+    };
+</script>
+
+<style>
+    .badge.fraud {
+        background: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+    }
+
+    .badge.suspicious {
+        background: #fef3c7;
+        color: #d97706;
+        border: 1px solid #fde68a;
+    }
+
+    .badge.legitimate {
+        background: #d1fae5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+    }
+</style>
+{% endblock %}
